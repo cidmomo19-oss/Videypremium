@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Videy - Premium</title>
+    <link rel="icon" type="image/x-icon" href="https://i.ibb.co.com/SpVMhDf/Picsart-25-12-18-16-27-03-730-2.jpg" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.css" type="text/css"/>
+    <script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script>
+
+    <style>
+        /* SETUP TATA LETAK SUPAYA CENTER PERFECT */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #ffffff; 
+            color: #1a1a1a; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; /* Kunci supaya lurus tengah */
+            justify-content: flex-start; 
+            padding-top: 50px; 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+        }
+        
+        /* CONTAINER PLAYER UTAMA (YANG DIPERBAIKI) */
+        .player-container { 
+            width: 95%; 
+            max-width: 800px; 
+            aspect-ratio: 16 / 9; 
+            background: #000; /* Background hitam pekat */
+            border-radius: 12px; /* Radius sedikit dikurangi biar lebih tegas di layar KW */
+            overflow: hidden; 
+            position: relative; 
+            
+            /* PERBAIKAN SHADOW & BORDER */
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); /* Shadow lebih "deep" biar kontras */
+            border: none; /* HAPUS GARIS PUTIH DISINI */
+            
+            z-index: 10; 
+        }
+        
+        #player-mount { width: 100%; height: 100%; }
+        #intro-container, #real-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        
+        /* PERBAIKAN SUPAYA TIDAK ADA CELAH DI BAWAH */
+        iframe, .fluid_video_wrapper, video { 
+            width: 100% !important; 
+            height: 100% !important; 
+            border: none !important; 
+            display: block !important; /* Wajib block supaya celah bawah hilang */
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* TOMBOL SKIP KEREN */
+        #manual-skip-btn {
+            display: none; 
+            width: 95%;
+            max-width: 800px;
+            margin-top: 25px; /* Jarak sedikit diperlebar */
+            background: linear-gradient(135deg, #FF3B30 0%, #FF2D55 100%); 
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 20px rgba(255, 45, 85, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(0);
+            text-align: center;
+            z-index: 5;
+            animation: slideUpFade 0.6s ease-out;
+        }
+
+        #manual-skip-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(255, 45, 85, 0.4);
+            background: linear-gradient(135deg, #ff4f45 0%, #ff4066 100%);
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .verify-card { background: #ffffff; padding: 40px; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.06); border: 1px solid #f0f0f0; width: 90%; max-width: 380px; text-align: center; z-index: 1000; margin-bottom: 50px; }
+        .code-display { font-size: 32px; font-weight: 600; letter-spacing: 8px; color: #1a1a1a; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 16px; }
+        input[type="tel"] { width: 100%; padding: 14px; border-radius: 14px; border: 1.5px solid #eee; text-align: center; font-size: 18px; margin-bottom: 15px; transition: all 0.3s ease; }
+        input[type="tel"]:focus { outline: none; border-color: #000; background: #fafafa; }
+        .btn-verify { width: 100%; background: #000; color: #fff; padding: 14px; border-radius: 14px; font-weight: 600; transition: opacity 0.3s; cursor: pointer; border: none; }
+        .btn-verify:hover { opacity: 0.8; }
+        .after-verify-button-text { color: #6b7280; font-size: 0.875rem; margin-top: 15px; line-height: 1.4; }
+        
+        #ad-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; cursor: pointer; background: transparent; }
+        #error-msg { color: #ef4444; font-size: 0.9rem; margin-top: -10px; margin-bottom: 10px; font-weight: 600; display: none; }
+        
+        #wait-message { margin-top: 20px; font-size: 14px; color: #6b7280; font-weight: 500; display: none; }
+    </style>
+</head>
+<body data-version="v13.0-FIXED-LAYOUT">
+
+    <div id="ad-overlay"></div>
+
+    <div id="verify-screen" class="verify-card">
+        <h2 class="text-xl font-semibold mb-2">Verifikasi</h2>
+        <p class="text-gray-400 text-sm mb-6">Masukkan kode di bawah untuk memutar video</p>
+        <p id="error-msg">Kode salah!</p>
+        <div class="code-display" id="display-code">----</div>
+        <input type="tel" id="user-input" placeholder="____" maxlength="4">
+        <button onclick="startFlow()" class="btn-verify">Konfirmasi</button>
+        <p class="after-verify-button-text">❗ Jika Video tidak muncul harap nonaktifkan AdBlock atau pemblokir iklan lainnya.</p>
+    </div>
+
+    <div class="player-container" id="player-section" style="display:none;">
+        <div id="player-mount"></div>
+    </div>
+    
+    <!-- TOMBOL SKIP -->
+    <button id="manual-skip-btn" onclick="userClickSkip()">
+        LEWATI <span style="margin-left:8px;">&#10095;</span>
+    </button>
+    
+    <div id="wait-message">Silakan Klik tombol <b>PLAY</b> pada video...</div>
+
+    <script>
+        const VAST_URL = "https://vast.yomeno.xyz/vast?spot_id=1475120";
+        const DIRECT_LINK = "https://commonwealthgroovemadam.com/gswk7qfn?key=e9ea457a62ae2243b08195c6772247a3";
+        
+        const playerBases = { 
+            h: 'https://short.icu/', s: 'https://gradehgplus.com/e/', v: 'https://vidhidepre.com/v/',
+            t: 'https://emturbovid.com/t/', d: 'https://dood.li/e/', o: 'https://voe.sx/e/',
+            f: 'https://filemoon.sx/e/', st: 'https://streamtape.com/e/', md: 'https://mixdrop.co/e/',
+            sw: 'https://streamwish.com/e/', fl: 'https://filelions.live/v/', ok: 'https://ok.ru/videoembed/',
+            vm: 'https://player.vimeo.com/video/', dm: 'https://www.dailymotion.com/embed/video/',
+            lul: 'https://lulustream.com/e/', vz: 'https://vidoza.net/embed-', up: 'https://upstream.to/embed-',
+            db: 'https://www.dropbox.com/s/', g: 'https://drive.google.com/file/d/',
+            r: 'https://pub-GANTI_DOMAIN_R2_LU.r2.dev/'
+        };
+
+        let correctCode = Math.floor(1000 + Math.random() * 9000);
+        document.getElementById('display-code').innerText = correctCode;
+        let myFP = null;
+        let switched = false;
+        let safetyTimer = null;
+        let logicInterval = null; 
+        
+        let introPlayedSeconds = 0; 
+
+        document.getElementById('ad-overlay').addEventListener('click', function() {
+            window.open(DIRECT_LINK, '_blank');
+            this.remove();
+        });
+
+        function startFlow() {
+            const val = document.getElementById('user-input').value;
+            if (val == correctCode) {
+                document.getElementById('verify-screen').style.display = 'none';
+                document.getElementById('player-section').style.display = 'block';
+                document.getElementById('wait-message').style.display = 'block';
+                initSequence();
+            } else {
+                document.getElementById('error-msg').style.display = 'block';
+            }
+        }
+
+        function initSequence() {
+            const mount = document.getElementById('player-mount');
+            
+            mount.innerHTML = `
+                <div id="intro-container">
+                    <video id="intro-player" playsinline loop style="width:100%;height:100%;object-fit:cover;display:block;">
+                        <source src="https://cdn.videy.co/aVIYDE731.mp4" type="video/mp4">
+                        <source src="https://video.gumlet.io/6941bc37ad648471cb3255f1/694a096e621936ee013253a1/download.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <div id="real-container" style="display:none"></div>
+            `;
+
+            myFP = fluidPlayer('intro-player', {
+                layoutControls: { 
+                    autoPlay: false,
+                    mute: false,
+                    allowTheatre: false, 
+                    playButtonShowing: true, 
+                    fillToContainer: true,
+                    controlBar: { autoHide: true, autoHideTimeout: 0 } 
+                },
+                vastOptions: { 
+                    adList: [{ roll: 'preRoll', vastTag: VAST_URL }],
+                    vastTimeout: 10000,
+                    adFinishedCallback: () => { console.log("Ad Finish"); },
+                    adErrorCallback: () => { console.log("Ad Error"); }
+                }
+            });
+
+            // TIMER LOGIC
+            logicInterval = setInterval(() => {
+                if(switched) { clearInterval(logicInterval); return; }
+
+                const btn = document.getElementById('manual-skip-btn');
+                const isAdActive = document.querySelector('.fluid_ad_playing');
+                const videoEl = document.getElementById('intro-player');
+                
+                if (isAdActive) {
+                    btn.style.display = 'none';
+                } 
+                else {
+                    if (videoEl && !videoEl.paused) {
+                        introPlayedSeconds += 0.5;
+                        document.getElementById('wait-message').style.display = 'none';
+                    }
+
+                    if (introPlayedSeconds >= 8) {
+                        btn.style.display = 'block';
+                    } else {
+                        btn.style.display = 'none';
+                    }
+                }
+            }, 500);
+
+            // Safety Timer 5 Menit
+            safetyTimer = setTimeout(() => { finalSwitch(); }, 300000);
+        }
+
+        function userClickSkip() {
+            finalSwitch();
+        }
+
+        function finalSwitch() {
+            if(switched) return;
+            switched = true;
+
+            if(safetyTimer) clearTimeout(safetyTimer);
+            if(logicInterval) clearInterval(logicInterval);
+
+            const introContainer = document.getElementById('intro-container');
+            if(introContainer) introContainer.style.display = 'none';
+            document.getElementById('manual-skip-btn').style.display = 'none';
+            document.getElementById('wait-message').style.display = 'none';
+
+            const params = new URLSearchParams(window.location.search);
+            let finalUrl = "";
+
+            for (let key in playerBases) {
+                if (params.has(key)) { 
+                    finalUrl = playerBases[key] + params.get(key); 
+                    if (key === 'g') finalUrl += '/preview'; 
+                    if (key === 'vz' || key === 'up') finalUrl += '.html';
+                    if (key === 'db') finalUrl += '?raw=1';
+                    break; 
+                }
+            }
+
+            if(finalUrl) {
+                const realContainer = document.getElementById('real-container');
+                // Tambahan style block untuk iframe
+                realContainer.innerHTML = `<iframe src="${finalUrl}" allowfullscreen allow="autoplay" style="width:100%;height:100%;border:none;display:block;"></iframe>`;
+                realContainer.style.display = 'block';
+
+                setTimeout(() => {
+                    if(myFP) try { myFP.destroy(); } catch(e) {}
+                }, 100);
+            }
+        }
+    </script>
+</body>
+</html>
